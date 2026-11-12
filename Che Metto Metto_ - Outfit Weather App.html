@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Che Metto Metto? - Outfit Weather App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .glass-card-light {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 9999px;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="text-slate-100 flex items-center justify-center p-0 sm:p-4">
+
+    <!-- App Container (Mobile Mockup style on desktop, full screen on mobile) -->
+    <div class="w-full max-w-md bg-slate-900 sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[100vh] sm:h-[880px] border border-slate-800 relative">
+        
+        <!-- Header Top Bar -->
+        <header class="px-6 pt-6 pb-4 flex items-center justify-between border-b border-slate-800/85 bg-slate-900/90 sticky top-0 z-20 backdrop-blur-md">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-emerald-400 bg-clip-text text-transparent">Che Metto Metto?</h1>
+                </div>
+                <p id="location-display" class="text-xs text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+                    <i class="fa-solid fa-location-dot text-emerald-400"></i> Varese, Italia
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openCityModal()" class="w-10 h-10 rounded-2xl glass-card flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/15 transition-all shadow-sm active:scale-95" title="Cambia città">
+                    <i class="fa-solid fa-globe"></i>
+                </button>
+                <button onclick="resetToDefaultWeather()" class="w-10 h-10 rounded-2xl glass-card flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/15 transition-all shadow-sm active:scale-95" title="Aggiorna meteo Varese (9°C pioggia)">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Scrollable Content -->
+        <main class="flex-1 overflow-y-auto px-5 py-5 space-y-5 pb-24">
+            
+            <!-- Weather Card Widget -->
+            <div id="weather-banner" class="relative rounded-3xl p-6 overflow-hidden shadow-xl transition-all duration-500 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 border border-blue-500/20">
+                <div class="absolute -right-6 -bottom-6 opacity-15 text-9xl pointer-events-none" id="weather-bg-icon">
+                    <i class="fa-solid fa-cloud-rain"></i>
+                </div>
+                <div class="relative z-10">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span id="weather-condition-badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/30 text-blue-200 border border-blue-400/30 uppercase tracking-wider">
+                                Pioggia Leggera
+                            </span>
+                            <div class="mt-3 flex items-baseline gap-2">
+                                <span id="temp-display" class="text-5xl font-black tracking-tight text-white">9°</span>
+                                <span class="text-lg text-blue-200 font-medium">C</span>
+                            </div>
+                        </div>
+                        <div class="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-3xl text-blue-300 shadow-inner animate-float" id="weather-main-icon">
+                            <i class="fa-solid fa-cloud-rain"></i>
+                        </div>
+                    </div>
+                    
+                    <p id="weather-desc" class="text-sm text-slate-300 mt-3 font-medium">
+                        Cielo coperto con pioggia fine e umidità elevata. Perfetto per capi impermeabili e caldi.
+                    </p>
+
+                    <!-- Weather Details Row -->
+                    <div class="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-white/10 text-xs">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-droplet text-blue-400"></i>
+                            <div>
+                                <p class="text-slate-400">Umidità</p>
+                                <p id="humidity-display" class="font-semibold text-white">88%</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-wind text-cyan-400"></i>
+                            <div>
+                                <p class="text-slate-400">Vento</p>
+                                <p id="wind-display" class="font-semibold text-white">12 km/h</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-temperature-half text-amber-400"></i>
+                            <div>
+                                <p class="text-slate-400">Percepita</p>
+                                <p id="feels-display" class="font-semibold text-white">7°C</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weather Simulator Selector -->
+            <div>
+                <div class="flex items-center justify-between mb-2.5">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Simula Condizione Meteo</h2>
+                    <span class="text-[10px] text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded">Tocca per cambiare</span>
+                </div>
+                <div class="grid grid-cols-5 gap-2" id="weather-presets">
+                    <button onclick="setWeatherPreset('rain')" class="weather-btn flex flex-col items-center justify-center p-2.5 rounded-2xl glass-card border-blue-500/50 bg-blue-500/20 text-blue-300 transition-all hover:bg-blue-500/30" data-preset="rain">
+                        <i class="fa-solid fa-cloud-rain text-lg mb-1"></i>
+                        <span class="text-[10px] font-semibold">Pioggia</span>
+                    </button>
+                    <button onclick="setWeatherPreset('sunny')" class="weather-btn flex flex-col items-center justify-center p-2.5 rounded-2xl glass-card text-slate-400 hover:text-amber-300 transition-all" data-preset="sunny">
+                        <i class="fa-solid fa-sun text-lg mb-1"></i>
+                        <span class="text-[10px] font-semibold">Sole</span>
+                    </button>
+                    <button onclick="setWeatherPreset('cold')" class="weather-btn flex flex-col items-center justify-center p-2.5 rounded-2xl glass-card text-slate-400 hover:text-cyan-300 transition-all" data-preset="cold">
+                        <i class="fa-solid fa-snowflake text-lg mb-1"></i>
+                        <span class="text-[10px] font-semibold">Freddo</span>
+                    </button>
+                    <button onclick="setWeatherPreset('hot')" class="weather-btn flex flex-col items-center justify-center p-2.5 rounded-2xl glass-card text-slate-400 hover:text-orange-300 transition-all" data-preset="hot">
+                        <i class="fa-solid fa-temperature-high text-lg mb-1"></i>
+                        <span class="text-[10px] font-semibold">Caldo</span>
+                    </button>
+                    <button onclick="setWeatherPreset('windy')" class="weather-btn flex flex-col items-center justify-center p-2.5 rounded-2xl glass-card text-slate-400 hover:text-teal-300 transition-all" data-preset="windy">
+                        <i class="fa-solid fa-wind text-lg mb-1"></i>
+                        <span class="text-[10px] font-semibold">Vento</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Outfit Recommendation Section -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Consiglio Outfit del Giorno</h2>
+                    <button onclick="shuffleOutfit()" class="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20 active:scale-95 transition-all">
+                        <i class="fa-solid fa-shuffle">Rimescola</i>
+                    </button>
+                </div>
+
+                <!-- Outfit Card Container -->
+                <div class="glass-card rounded-3xl p-5 relative overflow-hidden shadow-lg border border-slate-700/60 bg-gradient-to-b from-slate-800/80 to-slate-900/90">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                    
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-shirt"></i>
+                        </div>
+                        <div>
+                            <h3 id="outfit-title" class="font-bold text-base text-white">Look Impermeabile & Casual</h3>
+                            <p id="outfit-subtitle" class="text-xs text-slate-400">Ideale per temperature fresche con rischio pioggia</p>
+                        </div>
+                    </div>
+
+                    <!-- Items Grid -->
+                    <div class="grid grid-cols-2 gap-3" id="outfit-items-grid">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+
+                    <!-- Style Tip Box -->
+                    <div class="mt-4 p-3.5 rounded-2xl bg-slate-800/90 border border-slate-700 flex items-start gap-3">
+                        <div class="text-emerald-400 text-base mt-0.5">
+                            <i class="fa-solid fa-lightbulb"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-200">Consiglio di Stile</h4>
+                            <p id="style-tip-text" class="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                                Vestiti a strati (layering): indossa una maglia termica sotto e un impermeabile traspirante sopra per affrontare pozzanghere e folate di vento.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Wardrobe Section -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Il Tuo Guardaroba</h2>
+                    <span id="wardrobe-count" class="text-xs text-slate-400 font-medium">8 capi disponibili</span>
+                </div>
+
+                <!-- Filter Tabs -->
+                <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs">
+                    <button onclick="filterWardrobe('all')" class="wardrobe-filter px-3.5 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold transition-all whitespace-nowrap" data-filter="all">Tutti</button>
+                    <button onclick="filterWardrobe('upper')" class="wardrobe-filter px-3.5 py-1.5 rounded-xl glass-card text-slate-300 hover:text-white transition-all whitespace-nowrap" data-filter="upper">Superiori</button>
+                    <button onclick="filterWardrobe('outer')" class="wardrobe-filter px-3.5 py-1.5 rounded-xl glass-card text-slate-300 hover:text-white transition-all whitespace-nowrap" data-filter="outer">Giacche</button>
+                    <button onclick="filterWardrobe('lower')" class="wardrobe-filter px-3.5 py-1.5 rounded-xl glass-card text-slate-300 hover:text-white transition-all whitespace-nowrap" data-filter="lower">Inferiori</button>
+                    <button onclick="filterWardrobe('shoes')" class="wardrobe-filter px-3.5 py-1.5 rounded-xl glass-card text-slate-300 hover:text-white transition-all whitespace-nowrap" data-filter="shoes">Scarpe</button>
+                    <button onclick="filterWardrobe('accessories')" class="wardrobe-filter px-3.5 py-1.5 rounded-xl glass-card text-slate-300 hover:text-white transition-all whitespace-nowrap" data-filter="accessories">Accessori</button>
+                </div>
+
+                <!-- Wardrobe Items Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="wardrobe-grid">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Bottom Navigation Bar -->
+        <nav class="absolute bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 px-6 py-3 flex items-center justify-around z-20 shadow-2xl">
+            <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center gap-1 text-emerald-400 transition-all" data-tab="home">
+                <i class="fa-solid fa-house text-lg"></i>
+                <span class="text-[10px] font-bold">Meteo & Look</span>
+            </button>
+            <button onclick="switchTab('wardrobe')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition-all" data-tab="wardrobe">
+                <i class="fa-solid fa-shirt text-lg"></i>
+                <span class="text-[10px] font-semibold">Guardaroba</span>
+            </button>
+            <button onclick="openCityModal()" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition-all">
+                <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                <span class="text-[10px] font-semibold">Cerca Città</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- City Selector Modal -->
+    <div id="city-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-card-light w-full max-w-sm rounded-3xl p-6 text-slate-900 shadow-2xl border border-white/60 animate-in fade-in zoom-in duration-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-extrabold text-lg text-slate-900">Seleziona Città</h3>
+                <button onclick="closeCityModal()" class="w-8 h-8 rounded-full bg-slate-200/80 flex items-center justify-center text-slate-700 hover:bg-slate-300">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-600 mb-4">Scegli una località o inseriscine una per ricevere suggerimenti su misura.</p>
+            
+            <div class="space-y-2 mb-4">
+                <button onclick="selectCity('Varese', 9, 'Pioggia leggera', 88, 12, 7, 'rain')" class="w-full text-left p-3 rounded-2xl bg-white/80 hover:bg-emerald-50 border border-slate-200 flex items-center justify-between transition-all shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">V</div>
+                        <div>
+                            <p class="font-bold text-sm text-slate-900">Varese</p>
+                            <p class="text-xs text-slate-500">9°C • Pioggia leggera (Predefinita)</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+                </button>
+                <button onclick="selectCity('Milano', 12, 'Nuvoloso', 75, 10, 11, 'windy')" class="w-full text-left p-3 rounded-2xl bg-white/80 hover:bg-emerald-50 border border-slate-200 flex items-center justify-between transition-all shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">M</div>
+                        <div>
+                            <p class="font-bold text-sm text-slate-900">Milano</p>
+                            <p class="text-xs text-slate-500">12°C • Nuvoloso</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+                </button>
+                <button onclick="selectCity('Roma', 20, 'Soleggiato', 50, 8, 21, 'sunny')" class="w-full text-left p-3 rounded-2xl bg-white/80 hover:bg-emerald-50 border border-slate-200 flex items-center justify-between transition-all shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center font-bold">R</div>
+                        <div>
+                            <p class="font-bold text-sm text-slate-900">Roma</p>
+                            <p class="text-xs text-slate-500">20°C • Soleggiato</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+                </button>
+                <button onclick="selectCity('Cortina d\'Ampezzo', -2, 'Neve', 92, 15, -6, 'cold')" class="w-full text-left p-3 rounded-2xl bg-white/80 hover:bg-emerald-50 border border-slate-200 flex items-center justify-between transition-all shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-cyan-100 text-cyan-600 flex items-center justify-center font-bold">C</div>
+                        <div>
+                            <p class="font-bold text-sm text-slate-900">Cortina d'Ampezzo</p>
+                            <p class="text-xs text-slate-500">-2°C • Nevischio</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-400"></i>
+                </button>
+            </div>
+
+            <div class="relative flex py-2 items-center">
+                <div class="flex-grow border-t border-slate-300"></div>
+                <span class="flex-shrink mx-4 text-xs text-slate-400 uppercase font-semibold">Oppure personalizza</span>
+                <div class="flex-grow border-t border-slate-300"></div>
+            </div>
+
+            <div class="mt-3 flex gap-2">
+                <input type="text" id="custom-city-input" placeholder="Inserisci città..." class="flex-1 bg-slate-100 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <button onclick="applyCustomCity()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-all shadow-sm">Cerca</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Message -->
+    <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-semibold flex items-center gap-2.5 transition-all duration-300 opacity-0 pointer-events-none translate-y-[-20px]">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toast-msg">Messaggio di notifica</span>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Database dei capi del guardaroba
+        const wardrobeItems = [
+            { id: 1, name: 'Giacca Impermeabile', category: 'outer', weather: ['rain', 'windy', 'cold'], icon: 'fa-cloud-rain', color: 'text-blue-400', bg: 'bg-blue-500/10' },
+            { id: 2, name: 'Piumino Invernale', category: 'outer', weather: ['cold'], icon: 'fa-snowflake', color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+            { id: 3, name: 'Trench Elegante', category: 'outer', weather: ['windy', 'sunny'], icon: 'fa-coat', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+            { id: 4, name: 'Maglione di Lana', category: 'upper', weather: ['cold', 'rain'], icon: 'fa-vest', color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+            { id: 5, name: 'Felpa con Cappuccio', category: 'upper', weather: ['rain', 'windy'], icon: 'fa-shirt', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+            { id: 6, name: 'T-Shirt in Cotone', category: 'upper', weather: ['sunny', 'hot'], icon: 'fa-shirt', color: 'text-orange-400', bg: 'bg-orange-500/10' },
+            { id: 7, name: 'Jeans Resistenti', category: 'lower', weather: ['rain', 'cold', 'windy'], icon: 'fa-user-pants', color: 'text-slate-300', bg: 'bg-slate-700/30' },
+            { id: 8, name: 'Pantaloni Chino', category: 'lower', weather: ['sunny', 'windy'], icon: 'fa-person', color: 'text-teal-400', bg: 'bg-teal-500/10' },
+            { id: 9, name: 'Pantaloncini Estivi', category: 'lower', weather: ['hot'], icon: 'fa-shorts', color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+            { id: 10, name: 'Stivaletti Impermeabili', category: 'shoes', weather: ['rain', 'cold'], icon: 'fa-shoe-prints', color: 'text-blue-300', bg: 'bg-blue-600/10' },
+            { id: 11, name: 'Sneakers Casual', category: 'shoes', weather: ['sunny', 'windy'], icon: 'fa-shoe-prints', color: 'text-emerald-300', bg: 'bg-emerald-600/10' },
+            { id: 12, name: 'Sandali Leggeri', category: 'shoes', weather: ['hot'], icon: 'fa-shoe-prints', color: 'text-orange-300', bg: 'bg-orange-600/10' },
+            { id: 13, name: 'Ombrello Tascabile', category: 'accessories', weather: ['rain'], icon: 'fa-umbrella', color: 'text-blue-400', bg: 'bg-blue-500/10' },
+            { id: 14, name: 'Occhiali da Sole', category: 'accessories', weather: ['sunny', 'hot'], icon: 'fa-glasses', color: 'text-amber-400', bg: 'bg-amber-500/10' },
+            { id: 15, name: 'Sciarpa di Lana', category: 'accessories', weather: ['cold'], icon: 'fa-muffler', color: 'text-cyan-400', bg: 'bg-cyan-500/10' }
+        ];
+
+        // Stato attuale dell'applicazione (Preimpostato su Varese: 9°C, pioggia leggera)
+        let currentState = {
+            city: 'Varese',
+            temp: 9,
+            condition: 'Pioggia Leggera',
+            humidity: 88,
+            wind: 12,
+            feels: 7,
+            preset: 'rain'
+        };
+
+        // Preset meteo disponibili
+        const weatherPresetsData = {
+            rain: {
+                temp: 9,
+                condition: 'Pioggia Leggera',
+                humidity: 88,
+                wind: 14,
+                feels: 7,
+                icon: 'fa-cloud-rain',
+                badgeBg: 'bg-blue-500/30 text-blue-200 border-blue-400/30',
+                gradient: 'from-blue-900 via-indigo-900 to-slate-900',
+                desc: 'Cielo coperto con pioggia fine e umidità elevata. Perfetto per capi impermeabili e caldi.',
+                outfitTitle: 'Look Impermeabile & Casual',
+                outfitSubtitle: 'Ideale per temperature fresche con rischio pioggia',
+                styleTip: 'Vestiti a strati: indossa una felpa comoda, giacca impermeabile, jeans robusti e stivaletti antipioggia. Non dimenticare l\'ombrello!'
+            },
+            sunny: {
+                temp: 22,
+                condition: 'Soleggiato & Piacevole',
+                humidity: 45,
+                wind: 8,
+                feels: 23,
+                icon: 'fa-sun',
+                badgeBg: 'bg-amber-500/30 text-amber-200 border-amber-400/30',
+                gradient: 'from-amber-900 via-slate-900 to-slate-900',
+                desc: 'Giornata splendida e soleggiata. Goditi la luce con abiti leggeri e traspiranti.',
+                outfitTitle: 'Look Primaverile / Sole',
+                outfitSubtitle: 'Leggero, comodo e luminoso',
+                styleTip: 'Ottima giornata per una T-shirt in cotone, pantaloni chino e comode sneakers. Porta con te gli occhiali da sole.'
+            },
+            cold: {
+                temp: -1,
+                condition: 'Freddo Intenso',
+                humidity: 70,
+                wind: 18,
+                feels: -5,
+                icon: 'fa-snowflake',
+                badgeBg: 'bg-cyan-500/30 text-cyan-200 border-cyan-400/30',
+                gradient: 'from-cyan-950 via-slate-900 to-slate-900',
+                desc: 'Temperature sotto zero e vento gelido. Necessario coprirsi molto bene.',
+                outfitTitle: 'Look Antigelo & Caldo',
+                outfitSubtitle: 'Massimo isolamento termico contro il freddo',
+                styleTip: 'Indossa un piumino pesante, maglione di lana, jeans e stivaletti imbottiti. Aggiungi una sciarpa per proteggere il collo.'
+            },
+            hot: {
+                temp: 31,
+                condition: 'Caldo Estivo',
+                humidity: 38,
+                wind: 6,
+                feels: 33,
+                icon: 'fa-temperature-high',
+                badgeBg: 'bg-orange-500/30 text-orange-200 border-orange-400/30',
+                gradient: 'from-orange-950 via-slate-900 to-slate-900',
+                desc: 'Sole cocente e caldo intenso. Prediligi tessuti leggeri e freschi.',
+                outfitTitle: 'Look Fresco & Estivo',
+                outfitSubtitle: 'Leggerezza assoluta e protezione UV',
+                styleTip: 'Via libera a T-shirt in cotone leggero, pantaloncini o abiti freschi, sandali e occhiali da sole protettivi.'
+            },
+            windy: {
+                temp: 14,
+                condition: 'Vento Forte',
+                humidity: 55,
+                wind: 28,
+                feels: 11,
+                icon: 'fa-wind',
+                badgeBg: 'bg-teal-500/30 text-teal-200 border-teal-400/30',
+                gradient: 'from-teal-950 via-slate-900 to-slate-900',
+                desc: 'Rafficate folate di vento rendono l\'aria più frizzante del previsto.',
+                outfitTitle: 'Look Antivento Dinamico',
+                outfitSubtitle: 'Pratico e protettivo contro le raffiche',
+                styleTip: 'Un trench elegante o una giacca antivento con felpa sono la combinazione ideale per muoversi agilmente in città.'
+            }
+        };
+
+        // Inizializzazione applicazione
+        window.addEventListener('DOMContentLoaded', () => {
+            updateUI();
+            renderWardrobe('all');
+        });
+
+        // Aggiorna tutta la UI in base allo stato meteo corrente
+        function updateUI() {
+            const data = weatherPresetsData[currentState.preset];
+            
+            // Aggiorna banner meteo
+            document.getElementById('temp-display').textContent = currentState.temp + '°';
+            document.getElementById('humidity-display').textContent = currentState.humidity + '%';
+            document.getElementById('wind-display').textContent = currentState.wind + ' km/h';
+            document.getElementById('feels-display').textContent = currentState.feels + '°C';
+            document.getElementById('weather-condition-badge').textContent = currentState.condition;
+            document.getElementById('weather-desc').textContent = data.desc;
+            document.getElementById('location-display').innerHTML = `<i class="fa-solid fa-location-dot text-emerald-400"></i> ${currentState.city}, Italia`;
+
+            // Icona principale meteo
+            const mainIconContainer = document.getElementById('weather-main-icon');
+            mainIconContainer.innerHTML = `<i class="fa-solid ${data.icon}"></i>`;
+            
+            const bgIconContainer = document.getElementById('weather-bg-icon');
+            bgIconContainer.innerHTML = `<i class="fa-solid ${data.icon}"></i>`;
+
+            // Banner gradiente
+            const banner = document.getElementById('weather-banner');
+            banner.className = `relative rounded-3xl p-6 overflow-hidden shadow-xl transition-all duration-500 bg-gradient-to-br ${data.gradient} border border-white/10`;
+
+            // Aggiorna pulsanti preset attivi
+            document.querySelectorAll('.weather-btn').forEach(btn => {
+                const preset = btn.getAttribute('data-preset');
+                if (preset === currentState.preset) {
+                    btn.className = 'weather-btn flex flex-col items-center justify-center p-2.5 rounded-2xl glass-card border-emerald-500 bg-emerald-500/20 text-emerald-300 transition-all shadow-md scale-105';
+                } else {
+                    btn.className = 'weather-btn flex flex-col items-center justify-center p-2.5 rounded-2xl glass-card text-slate-400 hover:text-white transition-all';
+                }
+            });
+
+            // Aggiorna consigli outfit
+            document.getElementById('outfit-title').textContent = data.outfitTitle;
+            document.getElementById('outfit-subtitle').textContent = data.outfitSubtitle;
+            document.getElementById('style-tip-text').textContent = data.styleTip;
+
+            renderRecommendedOutfitItems(currentState.preset);
+        }
+
+        // Imposta un preset meteo
+        function setWeatherPreset(presetKey) {
+            const preset = weatherPresetsData[presetKey];
+            if (!preset) return;
+            
+            currentState.preset = presetKey;
+            currentState.temp = preset.temp;
+            currentState.condition = preset.condition;
+            currentState.humidity = preset.humidity;
+            currentState.wind = preset.wind;
+            currentState.feels = preset.feels;
+
+            updateUI();
+            showToast(`Meteo aggiornato: ${currentState.city} (${currentState.condition})`, 'fa-cloud-sun');
+        }
+
+        // Reset meteo predefinito Varese (9°C e pioggia)
+        function resetToDefaultWeather() {
+            currentState = {
+                city: 'Varese',
+                temp: 9,
+                condition: 'Pioggia Leggera',
+                humidity: 88,
+                wind: 12,
+                feels: 7,
+                preset: 'rain'
+            };
+            updateUI();
+            showToast('Ripristinato meteo attuale a Varese (9°C, Pioggia)', 'fa-location-dot');
+        }
+
+        // Renderizza i capi consigliati per l'outfit in base al meteo
+        function renderRecommendedOutfitItems(preset) {
+            const grid = document.getElementById('outfit-items-grid');
+            grid.innerHTML = '';
+
+            // Filtra capi adatti al preset
+            const matchingItems = wardrobeItems.filter(item => item.weather.includes(preset));
+            
+            // Prendi 4 capi rappresentativi (giacca, superiore, inferiore, scarpe/accessorio)
+            const selectedItems = matchingItems.slice(0, 4);
+
+            if (selectedItems.length === 0) {
+                grid.innerHTML = '<p class="col-span-2 text-xs text-slate-400 text-center py-4">Nessun capo specifico trovato per questo meteo.</p>';
+                return;
+            }
+
+            selectedItems.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'glass-card p-3 rounded-2xl flex items-center gap-3 border border-white/10 hover:border-emerald-500/30 transition-all';
+                el.innerHTML = `
+                    <div class="w-10 h-10 rounded-xl ${item.bg} ${item.color} flex items-center justify-center text-base shrink-0">
+                        <i class="fa-solid ${item.icon}"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-bold text-white truncate">${item.name}</p>
+                        <p class="text-[10px] text-slate-400 capitalize">${getCategoryName(item.category)}</p>
+                    </div>
+                `;
+                grid.appendChild(el);
+            });
+        }
+
+        // Rimescola outfit casuale
+        function shuffleOutfit() {
+            showToast('Outfit rimescolato con successo!', 'fa-shuffle');
+            // Anima leggermente la griglia
+            const grid = document.getElementById('outfit-items-grid');
+            grid.style.opacity = '0.3';
+            setTimeout(() => {
+                // Mescola casualmente tra quelli compatibili
+                const matching = wardrobeItems.filter(item => item.weather.includes(currentState.preset));
+                // Fisher-Yates shuffle
+                for (let i = matching.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [matching[i], matching[j]] = [matching[j], matching[i]];
+                }
+                
+                grid.innerHTML = '';
+                matching.slice(0, 4).forEach(item => {
+                    const el = document.createElement('div');
+                    el.className = 'glass-card p-3 rounded-2xl flex items-center gap-3 border border-white/10';
+                    el.innerHTML = `
+                        <div class="w-10 h-10 rounded-xl ${item.bg} ${item.color} flex items-center justify-center text-base shrink-0">
+                            <i class="fa-solid ${item.icon}"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-bold text-white truncate">${item.name}</p>
+                            <p class="text-[10px] text-slate-400 capitalize">${getCategoryName(item.category)}</p>
+                        </div>
+                    `;
+                    grid.appendChild(el);
+                });
+                grid.style.opacity = '1';
+            }, 200);
+        }
+
+        // Renderizza il guardaroba completo
+        function renderWardrobe(categoryFilter) {
+            const grid = document.getElementById('wardrobe-grid');
+            grid.innerHTML = '';
+
+            const filtered = categoryFilter === 'all' 
+                ? wardrobeItems 
+                : wardrobeItems.filter(item => item.category === categoryFilter);
+
+            document.getElementById('wardrobe-count').textContent = `${filtered.length} capi`;
+
+            filtered.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'glass-card p-4 rounded-2xl flex flex-col items-center text-center border border-white/10 hover:border-emerald-500/40 transition-all group';
+                el.innerHTML = `
+                    <div class="w-12 h-12 rounded-2xl ${item.bg} ${item.color} flex items-center justify-center text-xl mb-2.5 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid ${item.icon}"></i>
+                    </div>
+                    <p class="text-xs font-bold text-white mb-1 leading-tight">${item.name}</p>
+                    <span class="text-[9px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">${getCategoryName(item.category)}</span>
+                `;
+                grid.appendChild(el);
+            });
+        }
+
+        // Filtra guardaroba per categoria
+        function filterWardrobe(category) {
+            document.querySelectorAll('.wardrobe-filter').forEach(btn => {
+                if (btn.getAttribute('data-filter') === category) {
+                    btn.className = 'wardrobe-filter px-3.5 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold transition-all whitespace-nowrap shadow-md';
+                } else {
+                    btn.className = 'wardrobe-filter px-3.5 py-1.5 rounded-xl glass-card text-slate-300 hover:text-white transition-all whitespace-nowrap';
+                }
+            });
+            renderWardrobe(category);
+        }
+
+        // Helper traduzione categorie
+        function getCategoryName(cat) {
+            const map = {
+                'upper': 'Superiore',
+                'outer': 'Giacca',
+                'lower': 'Inferiore',
+                'shoes': 'Scarpe',
+                'accessories': 'Accessorio'
+            };
+            return map[cat] || cat;
+        }
+
+        // Gestione modale Città
+        function openCityModal() {
+            document.getElementById('city-modal').classList.remove('hidden');
+        }
+
+        function closeCityModal() {
+            document.getElementById('city-modal').classList.add('hidden');
+        }
+
+        function selectCity(cityName, temp, condition, humidity, wind, feels, preset) {
+            currentState.city = cityName;
+            currentState.temp = temp;
+            currentState.condition = condition;
+            currentState.humidity = humidity;
+            currentState.wind = wind;
+            currentState.feels = feels;
+            currentState.preset = preset;
+
+            updateUI();
+            closeCityModal();
+            showToast(`Posizione aggiornata a ${cityName}`, 'fa-location-dot');
+        }
+
+        function applyCustomCity() {
+            const input = document.getElementById('custom-city-input');
+            const cityName = input.value.trim();
+            if (!cityName) {
+                showToast('Inserisci il nome di una città valida', 'fa-triangle-exclamation');
+                return;
+            }
+
+            currentState.city = cityName;
+            // Genera valori casuali realistici
+            currentState.temp = Math.floor(Math.random() * 25) + 2;
+            currentState.condition = 'Variabile';
+            currentState.humidity = Math.floor(Math.random() * 40) + 40;
+            currentState.wind = Math.floor(Math.random() * 15) + 5;
+            currentState.feels = currentState.temp - 2;
+            currentState.preset = currentState.temp < 10 ? 'cold' : (currentState.temp > 22 ? 'sunny' : 'windy');
+
+            input.value = '';
+            updateUI();
+            closeCityModal();
+            showToast(`Meteo caricato per ${cityName}`, 'fa-globe');
+        }
+
+        // Notifiche Toast
+        function showToast(message, iconClass = 'fa-circle-check') {
+            const toast = document.getElementById('toast');
+            const msg = document.getElementById('toast-msg');
+            const icon = document.getElementById('toast-icon');
+
+            msg.textContent = message;
+            icon.className = `fa-solid ${iconClass} text-emerald-400`;
+
+            toast.classList.remove('opacity-0', 'translate-y-[-20px]', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-[-20px]', 'pointer-events-none');
+            }, 3000);
+        }
+
+        // Navigazione tab inferiore
+        function switchTab(tabName) {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.getAttribute('data-tab') === tabName) {
+                    btn.classList.remove('text-slate-400');
+                    btn.classList.add('text-emerald-400');
+                } else if(btn.getAttribute('data-tab')) {
+                    btn.classList.remove('text-emerald-400');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+            if (tabName === 'wardrobe') {
+                showToast('Sezione Guardaroba interattivo', 'fa-shirt');
+            }
+        }
+    </script>
+</body>
+</html>
